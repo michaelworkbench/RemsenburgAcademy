@@ -1,0 +1,302 @@
+import { useNavigate } from "@tanstack/react-router";
+import { Plus, Trash2, Upload } from "lucide-react";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { createEvent, updateEvent, type EventDateInput } from "@/lib/events-store";
+import { EVENT_CATEGORIES, type AcademyEvent, type EventCategory } from "@/lib/events-types";
+
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+
+function blankDate(): EventDateInput {
+  return { date: "", start_time: "10:00", end_time: "16:00" };
+}
+
+export function EventForm({ event }: { event?: AcademyEvent }) {
+  const navigate = useNavigate();
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const [title, setTitle] = useState(event?.title ?? "");
+  const [category, setCategory] = useState<EventCategory>(event?.category ?? "General");
+  const [description, setDescription] = useState(event?.description ?? "");
+  const [imageUrl, setImageUrl] = useState<string | null>(event?.image_url ?? null);
+  const [published, setPublished] = useState(event?.published ?? false);
+  const [dates, setDates] = useState<EventDateInput[]>(
+    event && event.dates.length > 0
+      ? event.dates.map((d) => ({
+          date: d.date,
+          start_time: d.start_time,
+          end_time: d.end_time,
+        }))
+      : [blankDate()],
+  );
+  const [errors, setErrors] = useState<string[]>([]);
+
+  function updateDate(index: number, patch: Partial<EventDateInput>) {
+    setDates((prev) => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)));
+  }
+
+  async function handleFile(file: File) {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file (JPG or PNG).");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast.error("That image is larger than 4 MB. Please choose a smaller one.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageUrl(String(reader.result));
+      toast.success("Poster added.");
+    };
+    reader.onerror = () => toast.error("That image could not be read. Please try another file.");
+    reader.readAsDataURL(file);
+  }
+
+  function validate(): string[] {
+    const found: string[] = [];
+    if (!title.trim()) found.push("Please give the event a title.");
+    const filled = dates.filter((d) => d.date);
+    if (filled.length === 0) found.push("Please add at least one date for the event.");
+    for (const d of filled) {
+      if (d.start_time && d.end_time && d.end_time <= d.start_time) {
+        found.push(`On ${d.date}, the end time must be later than the start time.`);
+        break;
+      }
+    }
+    return found;
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const found = validate();
+    setErrors(found);
+    if (found.length > 0) {
+      toast.error("Please fix the highlighted items before saving.");
+      return;
+    }
+
+    const payload = {
+      title,
+      description,
+      category,
+      image_url: imageUrl,
+      published,
+      dates: dates
+        .filter((d) => d.date)
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    };
+
+    if (event) {
+      updateEvent(event.id, payload);
+      toast.success("Event saved.");
+    } else {
+      createEvent(payload);
+      toast.success("Event created.");
+    }
+    navigate({ to: "/admin" });
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-10">
+      {errors.length > 0 ? (
+        <div
+          role="alert"
+          className="border border-destructive/40 bg-destructive/5 p-5 text-sm text-destructive"
+        >
+          <p className="font-semibold">There's a little more to fill in:</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            {errors.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="title">Event title</Label>
+          <Input
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Art @ The Academy presents: Celebrate Life!"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="category">Category</Label>
+          <Select value={category} onValueChange={(v) => setCategory(v as EventCategory)}>
+            <SelectTrigger id="category">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {EVENT_CATEGORIES.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="poster">Poster image</Label>
+          <div className="flex items-center gap-4">
+            <input
+              ref={fileInput}
+              id="poster"
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleFile(file);
+              }}
+            />
+            <Button type="button" variant="outline" onClick={() => fileInput.current?.click()}>
+              <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
+              {imageUrl ? "Replace image" : "Choose image"}
+            </Button>
+            {imageUrl ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setImageUrl(null)}
+                className="text-destructive"
+              >
+                Remove
+              </Button>
+            ) : null}
+          </div>
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt="Selected event poster preview"
+              className="mt-3 max-h-48 border border-border object-contain"
+            />
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Optional. JPG or PNG up to 4 MB.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            rows={5}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="A short paragraph describing the event for visitors."
+          />
+        </div>
+      </div>
+
+      <fieldset className="border border-border bg-card p-6">
+        <legend className="px-2 font-display text-xl">Dates &amp; times</legend>
+        <p className="text-sm text-muted-foreground">
+          One event can run on many days. Add a row for each day — a six-day exhibit is one event
+          with six dates.
+        </p>
+
+        <ul className="mt-6 list-none space-y-4 p-0">
+          {dates.map((d, index) => (
+            <li
+              key={index}
+              className="grid gap-4 border-b border-border pb-4 last:border-0 last:pb-0 sm:grid-cols-[1.2fr_1fr_1fr_auto] sm:items-end"
+            >
+              <div className="space-y-2">
+                <Label htmlFor={`date-${index}`}>Date</Label>
+                <Input
+                  id={`date-${index}`}
+                  type="date"
+                  value={d.date}
+                  onChange={(e) => updateDate(index, { date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`start-${index}`}>Start time</Label>
+                <Input
+                  id={`start-${index}`}
+                  type="time"
+                  value={d.start_time}
+                  onChange={(e) => updateDate(index, { start_time: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`end-${index}`}>End time</Label>
+                <Input
+                  id={`end-${index}`}
+                  type="time"
+                  value={d.end_time}
+                  onChange={(e) => updateDate(index, { end_time: e.target.value })}
+                />
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                aria-label={`Remove date ${index + 1}`}
+                disabled={dates.length === 1}
+                onClick={() => setDates((prev) => prev.filter((_, i) => i !== index))}
+                className="text-destructive"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-6"
+          onClick={() =>
+            setDates((prev) => [
+              ...prev,
+              {
+                date: "",
+                start_time: prev[prev.length - 1]?.start_time ?? "10:00",
+                end_time: prev[prev.length - 1]?.end_time ?? "16:00",
+              },
+            ])
+          }
+        >
+          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+          Add another date
+        </Button>
+      </fieldset>
+
+      <div className="flex flex-wrap items-center justify-between gap-6 border border-border bg-parchment p-6">
+        <div className="flex items-center gap-4">
+          <Switch id="published" checked={published} onCheckedChange={setPublished} />
+          <Label htmlFor="published" className="text-base">
+            Published
+            <span className="block text-sm font-normal text-muted-foreground">
+              {published
+                ? "Visible on the public website."
+                : "Saved as a draft — nobody outside the admin sees it."}
+            </span>
+          </Label>
+        </div>
+        <Button type="submit" size="lg" className="min-w-40 text-base">
+          Save event
+        </Button>
+      </div>
+    </form>
+  );
+}

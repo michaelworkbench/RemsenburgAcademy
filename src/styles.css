@@ -1,0 +1,267 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * The Remsenburg Academy design system.
+ *
+ * Historic, elegant, understated: warm ivory paper, charcoal text, deep
+ * heritage navy accent, classic serif display type over a humanist sans.
+ * All colors are oklch semantic tokens — never hardcode colors in components.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 10px);
+  --radius-3xl: calc(var(--radius) + 14px);
+  --radius-4xl: calc(var(--radius) + 18px);
+
+  --font-display: "Vidaloka", "Playfair Display", Georgia, serif;
+  --font-sans: "Lora", Georgia, "Times New Roman", serif;
+  --font-serif: "Lora", Georgia, serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-parchment: var(--parchment);
+  --color-navy: var(--navy);
+  --color-navy-soft: var(--navy-soft);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Editorial pass: flat surfaces, no shadows anywhere on the public site. */
+  --shadow-frame: none;
+  --shadow-raised: none;
+}
+
+:root {
+  /* Squared corners everywhere. */
+  --radius: 0rem;
+
+  /* White #FFFFFF */
+  --background: oklch(1 0 0);
+  /* Charcoal #201E1E */
+  --foreground: oklch(0.253 0.002 17);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.253 0.002 17);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.253 0.002 17);
+
+  /* Deep heritage navy #243f82 */
+  --primary: oklch(0.401 0.129 267.5);
+  --primary-foreground: oklch(0.985 0.008 91);
+  --navy: oklch(0.401 0.129 267.5);
+  --navy-soft: oklch(0.401 0.129 267.5 / 8%);
+
+  --secondary: oklch(0.954 0.008 80);
+  --secondary-foreground: oklch(0.253 0.002 17);
+
+  --muted: oklch(0.954 0.008 80);
+  --muted-foreground: oklch(0.44 0.004 40);
+
+  --accent: oklch(0.954 0.008 80);
+  --accent-foreground: oklch(0.401 0.129 267.5);
+
+  --destructive: oklch(0.51 0.171 26);
+  --destructive-foreground: oklch(0.985 0.008 91);
+
+  /* Warm parchment #F4F0EB */
+  --parchment: oklch(0.954 0.008 80);
+  --border: oklch(0.884 0.006 76);
+  --input: oklch(0.884 0.006 76);
+  --ring: oklch(0.401 0.129 267.5);
+
+  --chart-1: oklch(0.401 0.129 267.5);
+  --chart-2: oklch(0.55 0.09 250);
+  --chart-3: oklch(0.66 0.07 80);
+  --chart-4: oklch(0.45 0.05 60);
+  --chart-5: oklch(0.75 0.04 90);
+
+  --sidebar: oklch(0.954 0.008 80);
+  --sidebar-foreground: oklch(0.253 0.002 17);
+  --sidebar-primary: oklch(0.401 0.129 267.5);
+  --sidebar-primary-foreground: oklch(0.985 0.008 91);
+  --sidebar-accent: oklch(0.954 0.008 80);
+  --sidebar-accent-foreground: oklch(0.401 0.129 267.5);
+  --sidebar-border: oklch(0.884 0.006 76);
+  --sidebar-ring: oklch(0.401 0.129 267.5);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-size: 1.125rem;
+    line-height: 1.75;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 1.12;
+    color: var(--color-foreground);
+  }
+
+  ::selection {
+    background-color: var(--navy-soft);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Small-caps letterspaced label used above section headings. */
+@utility eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+/* Full-width section bands with generous editorial rhythm. */
+@utility band {
+  padding-top: 4.5rem;
+  padding-bottom: 4.5rem;
+
+  @media (min-width: 768px) {
+    padding-top: 6.5rem;
+    padding-bottom: 6.5rem;
+  }
+}
+
+@utility band-parchment {
+  background-color: var(--color-parchment);
+}
+
+@utility measure {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 72rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+
+  @media (min-width: 768px) {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Flat, squared buttons. */
+@utility btn-solid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-primary);
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+  padding: 0.875rem 1.75rem;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  letter-spacing: 0.04em;
+  transition: opacity 150ms ease;
+
+  &:hover {
+    opacity: 0.88;
+  }
+}
+
+@utility btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-primary);
+  background-color: transparent;
+  color: var(--color-primary);
+  padding: 0.875rem 1.75rem;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  letter-spacing: 0.04em;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+
+  &:hover {
+    background-color: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
+}
+
+/* Small uppercase letterspaced label, e.g. event categories. */
+@utility label-caps {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+/* Thin decorative rule under section headings. */
+@utility hairline {
+  display: block;
+  width: 3.5rem;
+  height: 1px;
+  background-color: var(--color-primary);
+}
+
+@utility prose-academy {
+  & p {
+    margin-bottom: 1.25rem;
+    max-width: 68ch;
+  }
+  & p:last-child {
+    margin-bottom: 0;
+  }
+}
