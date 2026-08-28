@@ -171,7 +171,7 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
         <div className="space-y-2">
           <Label htmlFor="category">Category</Label>
           <Select value={category} onValueChange={(v) => setCategory(v as EventCategory)}>
-            <SelectTrigger id="category">
+            <SelectTrigger id="category" aria-describedby="category-hint">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -182,6 +182,11 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
               ))}
             </SelectContent>
           </Select>
+          <p id="category-hint" className="text-xs text-muted-foreground">
+            The category decides where the event appears. <strong>Art Exhibit</strong> and{" "}
+            <strong>Art Reception</strong> show on both the Events page and the ArtRemsenburg
+            page; <strong>General</strong> shows on the Events page only.
+          </p>
         </div>
 
         <div className="space-y-2">
