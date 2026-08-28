@@ -2,15 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { EventCard } from "@/components/event-card";
 import { PageHeader, PublicShell } from "@/components/public-shell";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { groupByYear, splitByTime } from "@/hooks/use-events";
 import { ACADEMY_IMAGES } from "@/lib/academy-images";
 import { fetchPublishedEvents } from "@/lib/api";
 import { ChevronDown } from "lucide-react";
+import { ogMeta } from "@/lib/site";
 
 export const Route = createFileRoute("/events")({
   loader: () => fetchPublishedEvents(),
@@ -28,8 +25,7 @@ export const Route = createFileRoute("/events")({
         content:
           "Art shows, artisan markets and community gatherings at the 1863 schoolhouse in Remsenburg, NY.",
       },
-      { property: "og:image", content: ACADEMY_IMAGES.heroBanner },
-      { name: "twitter:image", content: ACADEMY_IMAGES.heroBanner },
+      ...ogMeta("/events", ACADEMY_IMAGES.heroBanner),
     ],
   }),
   component: Events,

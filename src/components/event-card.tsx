@@ -5,22 +5,10 @@ import type { AcademyEvent } from "@/lib/events-types";
 import { cn } from "@/lib/utils";
 
 function CategoryBadge({ category }: { category: AcademyEvent["category"] }) {
-  return (
-    <span
-      className="label-caps block"
-    >
-      {category}
-    </span>
-  );
+  return <span className="label-caps block">{category}</span>;
 }
 
-export function EventCard({
-  event,
-  muted = false,
-}: {
-  event: AcademyEvent;
-  muted?: boolean;
-}) {
+export function EventCard({ event, muted = false }: { event: AcademyEvent; muted?: boolean }) {
   const { primary, detail } = formatEventDates(event);
   const times = timeSummary(event);
 

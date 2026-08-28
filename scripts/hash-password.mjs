@@ -19,8 +19,7 @@ if (!email || !email.includes("@")) {
   console.error("Usage: node scripts/hash-password.mjs <email> [password]");
   process.exit(1);
 }
-const password =
-  process.argv[3] ?? randomBytes(12).toString("base64url");
+const password = process.argv[3] ?? randomBytes(12).toString("base64url");
 
 const salt = webcrypto.getRandomValues(new Uint8Array(16));
 const key = await webcrypto.subtle.importKey(
@@ -42,6 +41,7 @@ const id = `adm-${randomUUID()}`;
 console.log(`Email:    ${email}`);
 console.log(`Password: ${password}`);
 console.log("");
+const sqlEmail = email.replaceAll("'", "''");
 console.log(
-  `INSERT INTO admins (id, email, password_hash) VALUES ('${id}', '${email}', '${hash}') ON CONFLICT(email) DO UPDATE SET password_hash = excluded.password_hash;`,
+  `INSERT INTO admins (id, email, password_hash) VALUES ('${id}', '${sqlEmail}', '${hash}') ON CONFLICT(email) DO UPDATE SET password_hash = excluded.password_hash;`,
 );

@@ -44,3 +44,8 @@ export function useSessionRefresh(): () => void {
   const queryClient = useQueryClient();
   return () => void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
 }
+
+/** True when a failed server call was caused by a missing/expired session. */
+export function isAuthError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes("Not signed in");
+}

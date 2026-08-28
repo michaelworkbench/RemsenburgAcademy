@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { PageHeader, PublicShell } from "@/components/public-shell";
 import { ACADEMY_IMAGES } from "@/lib/academy-images";
+import { ogMeta } from "@/lib/site";
 
 export const Route = createFileRoute("/support")({
   head: () => ({
@@ -18,8 +19,7 @@ export const Route = createFileRoute("/support")({
         content:
           "Make a tax-deductible contribution to the Remsenburg Academy Association, Inc., a 501(c)(3) not for profit corporation.",
       },
-      { property: "og:image", content: ACADEMY_IMAGES.buildingSquare },
-      { name: "twitter:image", content: ACADEMY_IMAGES.buildingSquare },
+      ...ogMeta("/support", ACADEMY_IMAGES.buildingSquare),
     ],
   }),
   component: Support,
@@ -37,15 +37,16 @@ function Support() {
             Preserving a Landmark
           </h2>
           <div className="prose-academy mt-8 text-lg leading-relaxed text-foreground/85">
-          <p>
-            The costs of maintaining the historic Academy building and property are funded primarily
-            by the generous support of the community. The Remsenburg Academy Association, Inc.,
-            which operates the Academy, is a 501(c)(3) not for profit corporation.
-          </p>
-          <p>
-            To make a tax-deductible contribution, please send a check made out to the Remsenburg
-            Academy Association, Inc. to P.O. Box 372, Remsenburg, NY 11960.
-          </p>
+            <p>
+              The costs of maintaining the historic Academy building and property are funded
+              primarily by the generous support of the community. The Remsenburg Academy
+              Association, Inc., which operates the Academy, is a 501(c)(3) not for profit
+              corporation.
+            </p>
+            <p>
+              To make a tax-deductible contribution, please send a check made out to the Remsenburg
+              Academy Association, Inc. to P.O. Box 372, Remsenburg, NY 11960.
+            </p>
           </div>
         </div>
 

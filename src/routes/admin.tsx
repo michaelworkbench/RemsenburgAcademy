@@ -48,7 +48,10 @@ function SignInScreen() {
         </p>
 
         {error ? (
-          <p role="alert" className="mt-6 border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+          <p
+            role="alert"
+            className="mt-6 border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive"
+          >
             {error}
           </p>
         ) : null}

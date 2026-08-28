@@ -85,11 +85,25 @@ export interface AdminIdentity {
   email: string;
 }
 
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_MINUTES = 15;
+
+/** null = wrong credentials, "locked" = throttled; otherwise the admin. */
 export async function signInWithPassword(
   email: string,
   password: string,
-): Promise<AdminIdentity | null> {
+): Promise<AdminIdentity | "locked" | null> {
   const db = getDb();
+  const key = email.trim().toLowerCase();
+
+  const throttle = await db
+    .prepare("SELECT fail_count, locked_until FROM login_attempts WHERE email = ?1")
+    .bind(key)
+    .first<{ fail_count: number; locked_until: string | null }>();
+  if (throttle?.locked_until && new Date(throttle.locked_until).getTime() > Date.now()) {
+    return "locked";
+  }
+
   const admin = await db
     .prepare("SELECT id, email, password_hash FROM admins WHERE email = ?1 COLLATE NOCASE")
     .bind(email.trim())
@@ -101,7 +115,31 @@ export async function signInWithPassword(
     admin?.password_hash ??
     `pbkdf2$sha256$${PBKDF2_ITERATIONS}$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=`;
   const ok = await verifyPassword(password, stored);
-  if (!admin || !ok) return null;
+  if (!admin || !ok) {
+    const failures = (throttle?.fail_count ?? 0) + 1;
+    const lockedUntil =
+      failures >= MAX_FAILED_ATTEMPTS
+        ? new Date(Date.now() + LOCKOUT_MINUTES * 60_000).toISOString()
+        : null;
+    await db
+      .prepare(
+        `INSERT INTO login_attempts (email, fail_count, locked_until, last_fail)
+         VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT(email) DO UPDATE SET
+           fail_count = excluded.fail_count,
+           locked_until = excluded.locked_until,
+           last_fail = excluded.last_fail`,
+      )
+      .bind(key, lockedUntil ? 0 : failures, lockedUntil, new Date().toISOString())
+      .run();
+    return null;
+  }
+
+  // Successful sign-in: clear throttle state and purge expired sessions.
+  await db.batch([
+    db.prepare("DELETE FROM login_attempts WHERE email = ?1").bind(key),
+    db.prepare("DELETE FROM sessions WHERE expires_at < ?1").bind(new Date().toISOString()),
+  ]);
 
   const token = newSessionToken();
   const tokenHash = await sha256Hex(token);

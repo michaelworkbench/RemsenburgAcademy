@@ -61,7 +61,9 @@ function EventRow({ event }: { event: AcademyEvent }) {
             void setPublished(event.id, !event.published)
               .then(() => {
                 refresh();
-                toast.success(event.published ? "Moved back to draft." : "Published to the website.");
+                toast.success(
+                  event.published ? "Moved back to draft." : "Published to the website.",
+                );
               })
               .catch(() => toast.error("That change didn't save. Please try again."))
           }

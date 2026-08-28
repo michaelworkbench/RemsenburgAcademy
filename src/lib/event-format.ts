@@ -30,15 +30,7 @@ const MONTHS_LONG = [
   "December",
 ];
 
-const WEEKDAYS = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 /** Parses "2024-08-02" as a local calendar day (no timezone shifting). */
 export function parseDay(iso: string): Date {
@@ -107,19 +99,24 @@ export function timeSummary(event: AcademyEvent): string[] {
   return [...seen];
 }
 
+/** The calendar day after `iso`, DST-safe (Date arithmetic normalizes). */
+function nextCalendarDay(iso: string): string {
+  const d = parseDay(iso);
+  const n = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+  const pad = (v: number) => String(v).padStart(2, "0");
+  return `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())}`;
+}
+
 function groupConsecutive(dates: EventDate[]): EventDate[][] {
   const groups: EventDate[][] = [];
   for (const d of dates) {
     const current = groups[groups.length - 1];
-    if (!current) {
+    const prev = current?.[current.length - 1]?.date;
+    if (current && prev && (d.date === prev || d.date === nextCalendarDay(prev))) {
+      current.push(d);
+    } else {
       groups.push([d]);
-      continue;
     }
-    const prev = parseDay(current[current.length - 1]!.date);
-    const next = parseDay(d.date);
-    const oneDay = 24 * 60 * 60 * 1000;
-    if (next.getTime() - prev.getTime() <= oneDay) current.push(d);
-    else groups.push([d]);
   }
   return groups;
 }
@@ -127,6 +124,9 @@ function groupConsecutive(dates: EventDate[]): EventDate[][] {
 function rangeLabel(group: EventDate[], withYear: boolean): string {
   const start = parseDay(group[0]!.date);
   const end = parseDay(group[group.length - 1]!.date);
+  if (withYear && start.getFullYear() !== end.getFullYear()) {
+    return `${MONTHS_SHORT[start.getMonth()]} ${start.getDate()}, ${start.getFullYear()} – ${MONTHS_SHORT[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`;
+  }
   const year = withYear ? `, ${end.getFullYear()}` : "";
   if (group.length === 1) {
     return `${MONTHS_SHORT[start.getMonth()]} ${start.getDate()}${year}`;
@@ -169,23 +169,25 @@ export function formatEventDates(event: AcademyEvent): {
   }
 
   const groups = groupConsecutive(dates);
-  const year = parseDay(dates[dates.length - 1]!.date).getFullYear();
   const spanFirst = parseDay(dates[0]!.date);
   const spanLast = parseDay(dates[dates.length - 1]!.date);
-  const span =
-    spanFirst.getMonth() === spanLast.getMonth()
+  const crossesYear = spanFirst.getFullYear() !== spanLast.getFullYear();
+  const year = spanLast.getFullYear();
+  const span = crossesYear
+    ? `${MONTHS_SHORT[spanFirst.getMonth()]} ${spanFirst.getDate()}, ${spanFirst.getFullYear()} – ${MONTHS_SHORT[spanLast.getMonth()]} ${spanLast.getDate()}, ${year}`
+    : spanFirst.getMonth() === spanLast.getMonth()
       ? `${MONTHS_SHORT[spanFirst.getMonth()]} ${spanFirst.getDate()}–${spanLast.getDate()}, ${year}`
       : `${MONTHS_SHORT[spanFirst.getMonth()]} ${spanFirst.getDate()} – ${MONTHS_SHORT[spanLast.getMonth()]} ${spanLast.getDate()}, ${year}`;
 
+  const groupList = crossesYear
+    ? groups.map((g) => rangeLabel(g, true)).join(" & ")
+    : groups.map((g) => rangeLabel(g, false)).join(" & ") + `, ${year}`;
+
   const weekdays = weekdayLabel(dates);
   if (weekdays && groups.length > 1) {
-    return { primary: `${weekdays}, ${span}`, detail: groups.map((g) => rangeLabel(g, false)).join(" & ") + `, ${year}` };
+    return { primary: `${weekdays}, ${span}`, detail: groupList };
   }
-  return {
-    primary: groups.map((g) => rangeLabel(g, false)).join(" & ") + `, ${year}`,
-    detail: null,
-  };
-
+  return { primary: groupList, detail: null };
 }
 
 export function formatDayLong(iso: string): string {

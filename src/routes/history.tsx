@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { PageHeader, PublicShell } from "@/components/public-shell";
 import { HISTORIC_PHOTOS } from "@/lib/academy-images";
+import { ogMeta } from "@/lib/site";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -18,9 +19,7 @@ export const Route = createFileRoute("/history")({
         content:
           "From 1863 schoolhouse to Post Office to Town of Southampton landmark: the story of the Remsenburg Academy.",
       },
-      { property: "og:image", content: HISTORIC_PHOTOS[0]!.src },
-      { name: "twitter:image", content: HISTORIC_PHOTOS[0]!.src },
-
+      ...ogMeta("/history", HISTORIC_PHOTOS[0]!.src),
     ],
   }),
   component: History,

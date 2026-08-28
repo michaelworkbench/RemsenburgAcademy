@@ -3,6 +3,7 @@ import { Mail, MapPin } from "lucide-react";
 
 import { PageHeader, PublicShell } from "@/components/public-shell";
 import { ACADEMY_IMAGES } from "@/lib/academy-images";
+import { ogMeta } from "@/lib/site";
 
 const OFFICERS = [
   { name: "Maggie Brush", role: "President" },
@@ -36,8 +37,7 @@ export const Route = createFileRoute("/contact")({
         content:
           "Committee roster and contact details for the Remsenburg Academy Association, Inc.",
       },
-      { property: "og:image", content: ACADEMY_IMAGES.buildingSquare },
-      { name: "twitter:image", content: ACADEMY_IMAGES.buildingSquare },
+      ...ogMeta("/contact", ACADEMY_IMAGES.buildingSquare),
     ],
   }),
   component: Contact,

@@ -1,10 +1,6 @@
 export type EventCategory = "Art Exhibit" | "Art Reception" | "General";
 
-export const EVENT_CATEGORIES: EventCategory[] = [
-  "Art Exhibit",
-  "Art Reception",
-  "General",
-];
+export const EVENT_CATEGORIES: EventCategory[] = ["Art Exhibit", "Art Reception", "General"];
 
 /** One calendar occurrence of an event. An event may have many. */
 export interface EventDate {

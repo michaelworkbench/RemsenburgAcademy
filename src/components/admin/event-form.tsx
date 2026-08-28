@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { EVENTS_QUERY_KEY } from "@/hooks/use-events";
+import { isAuthError, useSessionRefresh } from "@/lib/admin-auth";
 import { createEvent, updateEvent, uploadPoster, type EventDateInput } from "@/lib/events-store";
 import { EVENT_CATEGORIES, type AcademyEvent, type EventCategory } from "@/lib/events-types";
 
@@ -30,6 +31,7 @@ function blankDate(): EventDateInput {
 export function EventForm({ event }: { event?: AcademyEvent }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const refreshSession = useSessionRefresh();
   const fileInput = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -102,9 +104,7 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
       category,
       image_url: imageUrl,
       published,
-      dates: dates
-        .filter((d) => d.date)
-        .sort((a, b) => a.date.localeCompare(b.date)),
+      dates: dates.filter((d) => d.date).sort((a, b) => a.date.localeCompare(b.date)),
     };
 
     setSaving(true);
@@ -115,8 +115,13 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
         toast.success(event ? "Event saved." : "Event created.");
         void navigate({ to: "/admin" });
       })
-      .catch(() => {
-        toast.error("The event couldn't be saved. Please try again.");
+      .catch((error: unknown) => {
+        if (isAuthError(error)) {
+          toast.error("Your session has expired — please sign in again. Your form is unchanged.");
+          refreshSession();
+        } else {
+          toast.error("The event couldn't be saved. Please try again.");
+        }
       })
       .finally(() => setSaving(false));
   }
@@ -205,9 +210,7 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
               className="mt-3 max-h-48 border border-border object-contain"
             />
           ) : (
-            <p className="text-xs text-muted-foreground">
-              Optional. JPG or PNG up to 4 MB.
-            </p>
+            <p className="text-xs text-muted-foreground">Optional. JPG or PNG up to 4 MB.</p>
           )}
         </div>
 
@@ -309,7 +312,12 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
             </span>
           </Label>
         </div>
-        <Button type="submit" size="lg" disabled={saving || uploading} className="min-w-40 text-base">
+        <Button
+          type="submit"
+          size="lg"
+          disabled={saving || uploading}
+          className="min-w-40 text-base"
+        >
           {saving ? "Saving…" : "Save event"}
         </Button>
       </div>

@@ -5,6 +5,7 @@ import { PublicShell } from "@/components/public-shell";
 import { ACADEMY_IMAGES } from "@/lib/academy-images";
 import { eventYear, firstDate } from "@/lib/event-format";
 import { fetchPublishedEvents } from "@/lib/api";
+import { ogMeta } from "@/lib/site";
 
 export const Route = createFileRoute("/artremsenburg")({
   loader: () => fetchPublishedEvents(),
@@ -22,8 +23,7 @@ export const Route = createFileRoute("/artremsenburg")({
         content:
           "Art exhibits and receptions at the 1863 Academy schoolhouse, Memorial Day through Labor Day.",
       },
-      { property: "og:image", content: ACADEMY_IMAGES.artBanner },
-      { name: "twitter:image", content: ACADEMY_IMAGES.artBanner },
+      ...ogMeta("/artremsenburg", ACADEMY_IMAGES.artBanner),
     ],
   }),
   component: ArtRemsenburg,

@@ -1,8 +1,8 @@
 /**
  * Events data layer (client side).
  *
- * Thin async wrappers over the server functions in src/server/events-fns.ts,
- * which read and write the D1 database. Reads of published events are public;
+ * Thin async wrappers over the server functions in src/lib/api.ts, which
+ * read and write the D1 database. Reads of published events are public;
  * everything else requires an admin session (enforced server-side).
  */
 import {

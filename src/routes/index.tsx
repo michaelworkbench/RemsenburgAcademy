@@ -6,6 +6,7 @@ import { PublicShell } from "@/components/public-shell";
 import { splitByTime } from "@/hooks/use-events";
 import { ACADEMY_IMAGES } from "@/lib/academy-images";
 import { fetchPublishedEvents } from "@/lib/api";
+import { ogMeta } from "@/lib/site";
 
 export const Route = createFileRoute("/")({
   loader: () => fetchPublishedEvents(),
@@ -23,8 +24,7 @@ export const Route = createFileRoute("/")({
         content:
           "A historic one-room schoolhouse on Remsenburg's main street, hosting art shows, artisan markets and community events.",
       },
-      { property: "og:image", content: ACADEMY_IMAGES.heroBanner },
-      { name: "twitter:image", content: ACADEMY_IMAGES.heroBanner },
+      ...ogMeta("/", ACADEMY_IMAGES.heroBanner),
     ],
   }),
   component: Home,
@@ -95,7 +95,10 @@ function Home() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="eyebrow">Upcoming Events</p>
-              <h2 id="upcoming-events" className="mt-4 font-display text-[2.5rem] leading-[1.1] md:text-5xl">
+              <h2
+                id="upcoming-events"
+                className="mt-4 font-display text-[2.5rem] leading-[1.1] md:text-5xl"
+              >
                 At the Academy
               </h2>
             </div>
@@ -117,10 +120,7 @@ function Home() {
                 There are no events on the calendar at the moment. New art shows, markets and
                 community gatherings are announced here as they are scheduled.
               </p>
-              <Link
-                to="/events"
-                className="mt-6 inline-block text-base text-primary underline"
-              >
+              <Link to="/events" className="mt-6 inline-block text-base text-primary underline">
                 Browse past events
               </Link>
             </div>

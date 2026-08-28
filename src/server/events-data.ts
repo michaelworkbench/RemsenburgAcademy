@@ -91,7 +91,13 @@ function dateInserts(eventId: string, input: EventWriteInput) {
       .prepare(
         "INSERT INTO event_dates (id, event_id, date, start_time, end_time) VALUES (?1, ?2, ?3, ?4, ?5)",
       )
-      .bind(`${eventId}-d${String(i + 1).padStart(2, "0")}-${crypto.randomUUID().slice(0, 8)}`, eventId, d.date, d.start_time, d.end_time),
+      .bind(
+        `${eventId}-d${String(i + 1).padStart(2, "0")}-${crypto.randomUUID().slice(0, 8)}`,
+        eventId,
+        d.date,
+        d.start_time,
+        d.end_time,
+      ),
   );
 }
 
@@ -103,7 +109,14 @@ export async function createEventRecord(input: EventWriteInput): Promise<string>
       .prepare(
         "INSERT INTO events (id, title, description, category, image_url, published) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
       )
-      .bind(id, input.title, input.description, input.category, input.image_url, input.published ? 1 : 0),
+      .bind(
+        id,
+        input.title,
+        input.description,
+        input.category,
+        input.image_url,
+        input.published ? 1 : 0,
+      ),
     ...dateInserts(id, input),
   ]);
   return id;
@@ -116,7 +129,14 @@ export async function updateEventRecord(id: string, input: EventWriteInput): Pro
       .prepare(
         "UPDATE events SET title = ?2, description = ?3, category = ?4, image_url = ?5, published = ?6 WHERE id = ?1",
       )
-      .bind(id, input.title, input.description, input.category, input.image_url, input.published ? 1 : 0),
+      .bind(
+        id,
+        input.title,
+        input.description,
+        input.category,
+        input.image_url,
+        input.published ? 1 : 0,
+      ),
     db.prepare("DELETE FROM event_dates WHERE event_id = ?1").bind(id),
     ...dateInserts(id, input),
   ]);

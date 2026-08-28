@@ -23,8 +23,21 @@ import {
 
 /* --------------------------------- schemas ---------------------------------- */
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD");
-const hhmm = z.string().regex(/^\d{2}:\d{2}$/, "Expected HH:MM");
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD")
+  .refine((s) => {
+    const [y, m, d] = s.split("-").map(Number);
+    const dt = new Date(Date.UTC(y!, m! - 1, d!));
+    return dt.getUTCFullYear() === y && dt.getUTCMonth() === m! - 1 && dt.getUTCDate() === d;
+  }, "Not a real calendar date");
+const hhmm = z
+  .string()
+  .regex(/^\d{2}:\d{2}$/, "Expected HH:MM")
+  .refine((t) => {
+    const [h, m] = t.split(":").map(Number);
+    return h! <= 23 && m! <= 59;
+  }, "Not a real time of day");
 
 const eventInputSchema = z.object({
   title: z.string().trim().min(1).max(200),
@@ -34,13 +47,17 @@ const eventInputSchema = z.object({
     .string()
     .max(500)
     .refine(
-      (v) => v.startsWith("/images/") || v.startsWith("/r2img/") || v.startsWith("https://"),
-      "Image must be a site image or an https URL.",
+      (v) => /^\/(images|r2img)\/[A-Za-z0-9/._-]+$/.test(v),
+      "Image must be one of this site's own images.",
     )
     .nullable(),
   published: z.boolean(),
   dates: z
-    .array(z.object({ date: isoDate, start_time: hhmm, end_time: hhmm }))
+    .array(
+      z
+        .object({ date: isoDate, start_time: hhmm, end_time: hhmm })
+        .refine((d) => d.end_time > d.start_time, "End time must be later than start time."),
+    )
     .min(1)
     .max(60),
 });
@@ -76,7 +93,9 @@ export const createEventFn = createServerFn({ method: "POST" })
   });
 
 export const updateEventFn = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => z.object({ id: idSchema.shape.id, input: eventInputSchema }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ id: idSchema.shape.id, input: eventInputSchema }).parse(d),
+  )
   .handler(async ({ data }) => {
     await requireAdmin();
     await updateEventRecord(data.id, { ...data.input, category: data.input.category as never });
@@ -92,7 +111,9 @@ export const deleteEventFn = createServerFn({ method: "POST" })
   });
 
 export const setPublishedFn = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => z.object({ id: idSchema.shape.id, published: z.boolean() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ id: idSchema.shape.id, published: z.boolean() }).parse(d),
+  )
   .handler(async ({ data }) => {
     await requireAdmin();
     await setEventPublished(data.id, data.published);
@@ -108,12 +129,23 @@ export const getSessionFn = createServerFn({ method: "GET" }).handler(async () =
 
 export const signInFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({ email: z.string().trim().min(1).max(200), password: z.string().min(1).max(200) }).parse(d),
+    z
+      .object({ email: z.string().trim().min(1).max(200), password: z.string().min(1).max(200) })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const admin = await signInWithPassword(data.email, data.password);
+    if (admin === "locked") {
+      return {
+        ok: false as const,
+        error: "Too many failed attempts. Please wait 15 minutes and try again.",
+      };
+    }
     if (!admin) {
-      return { ok: false as const, error: "That email and password don't match an Academy admin account." };
+      return {
+        ok: false as const,
+        error: "That email and password don't match an Academy admin account.",
+      };
     }
     return { ok: true as const, email: admin.email };
   });
@@ -145,7 +177,33 @@ export const uploadPosterFn = createServerFn({ method: "POST" })
       };
     }
     const bytes = Uint8Array.from(atob(data.dataBase64), (c) => c.charCodeAt(0));
-    const ext = data.contentType === "image/png" ? "png" : data.contentType === "image/webp" ? "webp" : "jpg";
+    if (bytes.length > 4 * 1024 * 1024) {
+      return {
+        ok: false as const,
+        error: "That image is larger than 4 MB. Please choose a smaller one.",
+      };
+    }
+    const looksLike = {
+      "image/jpeg": bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff,
+      "image/png": bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47,
+      "image/webp":
+        bytes[0] === 0x52 &&
+        bytes[1] === 0x49 &&
+        bytes[2] === 0x46 &&
+        bytes[3] === 0x46 &&
+        bytes[8] === 0x57 &&
+        bytes[9] === 0x45 &&
+        bytes[10] === 0x42 &&
+        bytes[11] === 0x50,
+    }[data.contentType];
+    if (!looksLike) {
+      return {
+        ok: false as const,
+        error: "That file doesn't look like a valid image. Please try another.",
+      };
+    }
+    const ext =
+      data.contentType === "image/png" ? "png" : data.contentType === "image/webp" ? "webp" : "jpg";
     const key = `posters/${crypto.randomUUID()}.${ext}`;
     await bucket.put(key, bytes.buffer as ArrayBuffer, {
       httpMetadata: { contentType: data.contentType },
