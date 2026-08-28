@@ -52,16 +52,27 @@ export function SiteFooter() {
             The Remsenburg Academy Association, Inc. is a 501(c)(3) not for profit corporation.
             Mailing address: P.O. Box 372, Remsenburg, NY 11960.
           </p>
-          <p className="shrink-0">
-            Designed by{" "}
-            <a
-              href="https://workbenchwebsites.com/"
-              target="_blank"
-              rel="noopener"
+          <p className="flex shrink-0 items-center gap-4">
+            <Link
+              to="/admin"
               className="no-underline transition-colors hover:text-primary-foreground hover:underline"
             >
-              Workbench Websites
-            </a>
+              Admin
+            </Link>
+            <span aria-hidden="true" className="text-primary-foreground/30">
+              ·
+            </span>
+            <span>
+              Designed by{" "}
+              <a
+                href="https://workbenchwebsites.com/"
+                target="_blank"
+                rel="noopener"
+                className="no-underline transition-colors hover:text-primary-foreground hover:underline"
+              >
+                Workbench Websites
+              </a>
+            </span>
           </p>
         </div>
       </div>
