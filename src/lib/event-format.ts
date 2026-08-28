@@ -59,11 +59,24 @@ export function lastDate(event: AcademyEvent): EventDate | undefined {
   return all[all.length - 1];
 }
 
-export function isUpcoming(event: AcademyEvent, today = new Date()): boolean {
+/**
+ * Today's calendar date at the Academy (America/New_York), as "YYYY-MM-DD".
+ * Anchoring to the venue's timezone keeps "upcoming vs past" correct on the
+ * server too, where SSR runs in UTC — otherwise an evening event would drop
+ * off the upcoming list at 8 pm New York time.
+ */
+export function todayAtTheAcademy(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+export function isUpcoming(event: AcademyEvent, todayIso = todayAtTheAcademy()): boolean {
   const last = lastDate(event);
-  if (!last) return false;
-  const midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  return parseDay(last.date).getTime() >= midnight.getTime();
+  return !!last && last.date >= todayIso;
 }
 
 export function eventYear(event: AcademyEvent): number {
