@@ -1,64 +1,46 @@
 /**
- * Admin session for the events panel.
+ * Admin session (client side).
  *
- * Accounts are created manually — there is no public sign-up. When the cloud
- * backend is enabled this module becomes a thin wrapper over email/password
- * auth (signInWithPassword / signOut / getUser) with no changes needed in the
- * admin routes, which only use the hook and helpers below.
+ * Sessions live in an HttpOnly cookie set by the server; the client can only
+ * ask "who am I?" via getSessionFn. Accounts are created manually — there is
+ * no public sign-up.
  */
-import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-const SESSION_KEY = "remsenburg-academy:admin-session";
-const CHANGE_EVENT = "remsenburg-academy:admin-session-changed";
+import { getSessionFn, signInFn, signOutFn } from "@/lib/api";
 
-/** Accounts provisioned for the board. Managed manually, never self-service. */
-const ADMIN_ACCOUNTS: { email: string; password: string }[] = [];
+export const SESSION_QUERY_KEY = ["admin-session"] as const;
 
 export interface AdminSession {
   email: string;
 }
 
-export function getSession(): AdminSession | null {
-  if (typeof window === "undefined") return null;
+export async function signIn(email: string, password: string): Promise<{ error: string | null }> {
   try {
-    const raw = window.localStorage.getItem(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as AdminSession) : null;
+    const result = await signInFn({ data: { email, password } });
+    return result.ok ? { error: null } : { error: result.error };
   } catch {
-    return null;
+    return { error: "Sign-in didn't go through. Please check your connection and try again." };
   }
 }
 
-export function signIn(email: string, password: string): { error: string | null } {
-  const match = ADMIN_ACCOUNTS.find(
-    (a) => a.email.toLowerCase() === email.trim().toLowerCase() && a.password === password,
-  );
-  if (!match) {
-    return { error: "That email and password don't match an Academy admin account." };
-  }
-  window.localStorage.setItem(SESSION_KEY, JSON.stringify({ email: match.email }));
-  window.dispatchEvent(new Event(CHANGE_EVENT));
-  return { error: null };
-}
-
-export function signOut(): void {
-  window.localStorage.removeItem(SESSION_KEY);
-  window.dispatchEvent(new Event(CHANGE_EVENT));
+export async function signOut(): Promise<void> {
+  await signOutFn({});
 }
 
 /** null = signed out, undefined = still checking (first client render). */
 export function useAdminSession(): AdminSession | null | undefined {
-  const [session, setSession] = useState<AdminSession | null | undefined>(undefined);
+  const { data, isPending } = useQuery({
+    queryKey: SESSION_QUERY_KEY,
+    queryFn: async () => (await getSessionFn()) ?? null,
+    staleTime: 60_000,
+    retry: false,
+  });
+  return isPending ? undefined : (data ?? null);
+}
 
-  useEffect(() => {
-    setSession(getSession());
-    const sync = () => setSession(getSession());
-    window.addEventListener(CHANGE_EVENT, sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener(CHANGE_EVENT, sync);
-      window.removeEventListener("storage", sync);
-    };
-  }, []);
-
-  return session;
+/** Invalidate the cached session after sign-in/out. */
+export function useSessionRefresh(): () => void {
+  const queryClient = useQueryClient();
+  return () => void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
 }

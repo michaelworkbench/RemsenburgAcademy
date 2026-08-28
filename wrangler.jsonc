@@ -1,0 +1,36 @@
+// Cloudflare Workers configuration for the Remsenburg Academy site.
+//
+// Build first (npm run build), then deploy with `npx wrangler deploy`.
+// The worker entry and static assets come out of the nitro build in .output/.
+//
+// NOTE ON ACCOUNTS: until launch this deploys to the Workbench Websites
+// (dev) Cloudflare account. At handoff, the Academy's own account gets its
+// own D1 database (create it, then run the files in migrations/ with
+// `npx wrangler d1 migrations apply remsenburg-academy --remote`) and this
+// database_id must be replaced with the new one.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "remsenburg-academy",
+  "main": ".output/server/index.mjs",
+  "compatibility_date": "2026-08-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "no_bundle": true,
+  "rules": [{ "type": "ESModule", "globs": ["**/*.mjs", "**/*.js"] }],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".output/public"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "remsenburg-academy",
+      "database_id": "955ee28a-6889-4131-81e2-6b2544f19b51"
+    }
+  ],
+  // Poster image uploads. PAUSED until the Academy's own Cloudflare account
+  // exists with R2 enabled — then create the bucket and uncomment:
+  // "r2_buckets": [
+  //   { "binding": "IMAGES", "bucket_name": "remsenburg-academy-images" }
+  // ],
+  "observability": { "enabled": true }
+}

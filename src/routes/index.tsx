@@ -3,10 +3,12 @@ import { MapPin } from "lucide-react";
 
 import { EventCard } from "@/components/event-card";
 import { PublicShell } from "@/components/public-shell";
-import { splitByTime, usePublishedEvents } from "@/hooks/use-events";
+import { splitByTime } from "@/hooks/use-events";
 import { ACADEMY_IMAGES } from "@/lib/academy-images";
+import { fetchPublishedEvents } from "@/lib/api";
 
 export const Route = createFileRoute("/")({
+  loader: () => fetchPublishedEvents(),
   head: () => ({
     meta: [
       { title: "The Remsenburg Academy — A Landmark Since 1863" },
@@ -29,7 +31,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const events = usePublishedEvents();
+  const events = Route.useLoaderData();
   const { upcoming } = splitByTime(events);
   const next = upcoming.slice(0, 3);
 

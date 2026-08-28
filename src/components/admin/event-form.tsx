@@ -15,7 +15,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { createEvent, updateEvent, type EventDateInput } from "@/lib/events-store";
+import { useQueryClient } from "@tanstack/react-query";
+
+import { EVENTS_QUERY_KEY } from "@/hooks/use-events";
+import { createEvent, updateEvent, uploadPoster, type EventDateInput } from "@/lib/events-store";
 import { EVENT_CATEGORIES, type AcademyEvent, type EventCategory } from "@/lib/events-types";
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
@@ -26,7 +29,10 @@ function blankDate(): EventDateInput {
 
 export function EventForm({ event }: { event?: AcademyEvent }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const fileInput = useRef<HTMLInputElement>(null);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const [title, setTitle] = useState(event?.title ?? "");
   const [category, setCategory] = useState<EventCategory>(event?.category ?? "General");
@@ -57,13 +63,14 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
       toast.error("That image is larger than 4 MB. Please choose a smaller one.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImageUrl(String(reader.result));
-      toast.success("Poster added.");
-    };
-    reader.onerror = () => toast.error("That image could not be read. Please try another file.");
-    reader.readAsDataURL(file);
+    setUploading(true);
+    const result = await uploadPoster(file).finally(() => setUploading(false));
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    setImageUrl(result.url);
+    toast.success("Poster added.");
   }
 
   function validate(): string[] {
@@ -100,14 +107,18 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
         .sort((a, b) => a.date.localeCompare(b.date)),
     };
 
-    if (event) {
-      updateEvent(event.id, payload);
-      toast.success("Event saved.");
-    } else {
-      createEvent(payload);
-      toast.success("Event created.");
-    }
-    navigate({ to: "/admin" });
+    setSaving(true);
+    const save = event ? updateEvent(event.id, payload) : createEvent(payload);
+    void save
+      .then(() => {
+        void queryClient.invalidateQueries({ queryKey: EVENTS_QUERY_KEY });
+        toast.success(event ? "Event saved." : "Event created.");
+        void navigate({ to: "/admin" });
+      })
+      .catch(() => {
+        toast.error("The event couldn't be saved. Please try again.");
+      })
+      .finally(() => setSaving(false));
   }
 
   return (
@@ -167,9 +178,14 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
                 if (file) void handleFile(file);
               }}
             />
-            <Button type="button" variant="outline" onClick={() => fileInput.current?.click()}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={uploading}
+              onClick={() => fileInput.current?.click()}
+            >
               <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
-              {imageUrl ? "Replace image" : "Choose image"}
+              {uploading ? "Uploading…" : imageUrl ? "Replace image" : "Choose image"}
             </Button>
             {imageUrl ? (
               <Button
@@ -293,8 +309,8 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
             </span>
           </Label>
         </div>
-        <Button type="submit" size="lg" className="min-w-40 text-base">
-          Save event
+        <Button type="submit" size="lg" disabled={saving || uploading} className="min-w-40 text-base">
+          {saving ? "Saving…" : "Save event"}
         </Button>
       </div>
     </form>

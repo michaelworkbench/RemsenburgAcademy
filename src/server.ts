@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { getImagesBucket, setCloudflareEnv } from "./server/cf";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -44,8 +45,36 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+/** Streams admin-uploaded poster images out of the R2 bucket. */
+async function serveR2Image(pathname: string): Promise<Response> {
+  const bucket = getImagesBucket();
+  if (!bucket) return new Response("Image storage not configured", { status: 404 });
+  const key = pathname.replace(/^\/r2img\//, "");
+  if (!/^posters\/[A-Za-z0-9-]+\.(jpg|png|webp)$/.test(key)) {
+    return new Response("Not found", { status: 404 });
+  }
+  const object = await bucket.get(key);
+  if (!object) return new Response("Not found", { status: 404 });
+  return new Response(object.body, {
+    headers: {
+      "content-type": object.httpMetadata?.contentType ?? "application/octet-stream",
+      "cache-control": "public, max-age=31536000, immutable",
+    },
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    setCloudflareEnv(env);
+    const url = new URL(request.url);
+    if (url.pathname.startsWith("/r2img/")) {
+      try {
+        return await serveR2Image(url.pathname);
+      } catch (error) {
+        console.error(error);
+        return new Response("Image unavailable", { status: 500 });
+      }
+    }
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

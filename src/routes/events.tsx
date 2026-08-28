@@ -7,11 +7,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { groupByYear, splitByTime, usePublishedEvents } from "@/hooks/use-events";
+import { groupByYear, splitByTime } from "@/hooks/use-events";
 import { ACADEMY_IMAGES } from "@/lib/academy-images";
+import { fetchPublishedEvents } from "@/lib/api";
 import { ChevronDown } from "lucide-react";
 
 export const Route = createFileRoute("/events")({
+  loader: () => fetchPublishedEvents(),
   head: () => ({
     meta: [
       { title: "Events at The Remsenburg Academy" },
@@ -34,7 +36,7 @@ export const Route = createFileRoute("/events")({
 });
 
 function Events() {
-  const events = usePublishedEvents();
+  const events = Route.useLoaderData();
   const { upcoming, past } = splitByTime(events);
   const pastByYear = groupByYear(past);
 

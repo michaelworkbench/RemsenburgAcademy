@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -14,7 +15,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { splitByTime, useAllEvents } from "@/hooks/use-events";
+import { EVENTS_QUERY_KEY, splitByTime, useAllEvents } from "@/hooks/use-events";
 import { formatEventDates, timeSummary } from "@/lib/event-format";
 import { deleteEvent, setPublished } from "@/lib/events-store";
 import type { AcademyEvent } from "@/lib/events-types";
@@ -25,6 +26,8 @@ export const Route = createFileRoute("/admin/")({
 
 function EventRow({ event }: { event: AcademyEvent }) {
   const { primary } = formatEventDates(event);
+  const queryClient = useQueryClient();
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: EVENTS_QUERY_KEY });
 
   return (
     <li className="flex flex-wrap items-start justify-between gap-4 border border-border bg-card p-5 shadow-frame">
@@ -54,10 +57,14 @@ function EventRow({ event }: { event: AcademyEvent }) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => {
-            setPublished(event.id, !event.published);
-            toast.success(event.published ? "Moved back to draft." : "Published to the website.");
-          }}
+          onClick={() =>
+            void setPublished(event.id, !event.published)
+              .then(() => {
+                refresh();
+                toast.success(event.published ? "Moved back to draft." : "Published to the website.");
+              })
+              .catch(() => toast.error("That change didn't save. Please try again."))
+          }
         >
           {event.published ? "Unpublish" : "Publish"}
         </Button>
@@ -83,10 +90,14 @@ function EventRow({ event }: { event: AcademyEvent }) {
             <AlertDialogFooter>
               <AlertDialogCancel>Keep event</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => {
-                  deleteEvent(event.id);
-                  toast.success("Event deleted.");
-                }}
+                onClick={() =>
+                  void deleteEvent(event.id)
+                    .then(() => {
+                      refresh();
+                      toast.success("Event deleted.");
+                    })
+                    .catch(() => toast.error("The event couldn't be deleted. Please try again."))
+                }
               >
                 Delete event
               </AlertDialogAction>
@@ -99,8 +110,12 @@ function EventRow({ event }: { event: AcademyEvent }) {
 }
 
 function AdminEventsList() {
-  const events = useAllEvents();
+  const { events, isLoading } = useAllEvents();
   const { upcoming, past } = splitByTime(events);
+
+  if (isLoading) {
+    return <p className="text-sm text-muted-foreground">Loading events…</p>;
+  }
 
   return (
     <div>

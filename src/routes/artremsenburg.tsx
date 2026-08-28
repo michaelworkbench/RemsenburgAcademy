@@ -2,11 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { EventCard } from "@/components/event-card";
 import { PublicShell } from "@/components/public-shell";
-import { usePublishedEvents } from "@/hooks/use-events";
 import { ACADEMY_IMAGES } from "@/lib/academy-images";
 import { eventYear, firstDate } from "@/lib/event-format";
+import { fetchPublishedEvents } from "@/lib/api";
 
 export const Route = createFileRoute("/artremsenburg")({
+  loader: () => fetchPublishedEvents(),
   head: () => ({
     meta: [
       { title: "ArtRemsenburg — The Remsenburg Academy" },
@@ -29,7 +30,7 @@ export const Route = createFileRoute("/artremsenburg")({
 });
 
 function ArtRemsenburg() {
-  const events = usePublishedEvents();
+  const events = Route.useLoaderData();
   const artEvents = events.filter(
     (e) => e.category === "Art Exhibit" || e.category === "Art Reception",
   );

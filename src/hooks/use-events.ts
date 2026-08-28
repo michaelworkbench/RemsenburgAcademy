@@ -1,30 +1,28 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
-import { loadAllEvents, loadPublishedEvents, subscribeToEvents } from "@/lib/events-store";
+import { firstDate, isUpcoming, lastDate, parseDay } from "@/lib/event-format";
 import type { AcademyEvent } from "@/lib/events-types";
-import { isUpcoming, firstDate, lastDate, parseDay } from "@/lib/event-format";
+import { fetchAllEvents, fetchPublishedEvents } from "@/lib/api";
 
-function useEventList(includeDrafts: boolean) {
-  const read = includeDrafts ? loadAllEvents : loadPublishedEvents;
-  const [events, setEvents] = useState<AcademyEvent[]>(() => read());
-
-  useEffect(() => {
-    setEvents(read());
-    return subscribeToEvents(() => setEvents(read()));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [includeDrafts]);
-
-  return events;
-}
+export const EVENTS_QUERY_KEY = ["events"] as const;
 
 /** Published events, for the public site. */
 export function usePublishedEvents(): AcademyEvent[] {
-  return useEventList(false);
+  const { data } = useQuery({
+    queryKey: [...EVENTS_QUERY_KEY, "published"],
+    queryFn: () => fetchPublishedEvents(),
+    staleTime: 60_000,
+  });
+  return data ?? [];
 }
 
 /** Every event including drafts, for the admin panel. */
-export function useAllEvents(): AcademyEvent[] {
-  return useEventList(true);
+export function useAllEvents(): { events: AcademyEvent[]; isLoading: boolean } {
+  const { data, isPending } = useQuery({
+    queryKey: [...EVENTS_QUERY_KEY, "all"],
+    queryFn: () => fetchAllEvents(),
+  });
+  return { events: data ?? [], isLoading: isPending };
 }
 
 function byStartAsc(a: AcademyEvent, b: AcademyEvent) {

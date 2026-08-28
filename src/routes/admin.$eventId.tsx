@@ -14,7 +14,18 @@ function EditEvent() {
   const [event, setEvent] = useState<AcademyEvent | null | undefined>(undefined);
 
   useEffect(() => {
-    setEvent(getEvent(eventId) ?? null);
+    let cancelled = false;
+    setEvent(undefined);
+    void getEvent(eventId)
+      .then((found) => {
+        if (!cancelled) setEvent(found);
+      })
+      .catch(() => {
+        if (!cancelled) setEvent(null);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [eventId]);
 
   return (

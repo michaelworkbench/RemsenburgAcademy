@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { signIn, signOut, useAdminSession } from "@/lib/admin-auth";
+import { signIn, signOut, useAdminSession, useSessionRefresh } from "@/lib/admin-auth";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -20,6 +20,8 @@ function SignInScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const refreshSession = useSessionRefresh();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-parchment px-5">
@@ -30,7 +32,12 @@ function SignInScreen() {
             setError("Please enter both your email and your password.");
             return;
           }
-          setError(signIn(email, password).error);
+          setSubmitting(true);
+          void signIn(email, password).then((result) => {
+            setSubmitting(false);
+            setError(result.error);
+            if (!result.error) refreshSession();
+          });
         }}
         className="w-full max-w-md border border-border bg-card p-8 shadow-raised"
       >
@@ -69,8 +76,8 @@ function SignInScreen() {
           </div>
         </div>
 
-        <Button type="submit" size="lg" className="mt-8 w-full text-base">
-          Sign in
+        <Button type="submit" size="lg" disabled={submitting} className="mt-8 w-full text-base">
+          {submitting ? "Signing in…" : "Sign in"}
         </Button>
         <Link to="/" className="mt-6 block text-center text-sm text-primary underline">
           Back to the website
@@ -82,6 +89,7 @@ function SignInScreen() {
 
 function AdminLayout() {
   const session = useAdminSession();
+  const refreshSession = useSessionRefresh();
 
   if (session === undefined) {
     return (
@@ -108,7 +116,11 @@ function AdminLayout() {
               View website
             </Link>
             <span className="hidden text-muted-foreground sm:inline">{session.email}</span>
-            <Button variant="outline" size="sm" onClick={() => signOut()}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void signOut().then(() => refreshSession())}
+            >
               Sign out
             </Button>
           </div>
