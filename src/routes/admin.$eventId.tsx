@@ -35,7 +35,9 @@ function EditEvent() {
       </Link>
 
       {event === undefined ? (
-        <p className="mt-8 text-sm text-muted-foreground">Loading event…</p>
+        <p role="status" className="mt-8 text-sm text-muted-foreground">
+          Loading event…
+        </p>
       ) : event === null ? (
         <div className="mt-6">
           <h1 className="font-display text-3xl">Event not found</h1>

@@ -116,7 +116,11 @@ function AdminEventsList() {
   const { upcoming, past } = splitByTime(events);
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading events…</p>;
+    return (
+      <p role="status" className="text-sm text-muted-foreground">
+        Loading events…
+      </p>
+    );
   }
 
   return (

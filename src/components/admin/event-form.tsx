@@ -24,6 +24,12 @@ import { EVENT_CATEGORIES, type AcademyEvent, type EventCategory } from "@/lib/e
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
+/** A validation problem tied to the field that owns it (id doubles as the summary item's DOM id). */
+interface FormError {
+  id: string;
+  message: string;
+}
+
 function blankDate(): EventDateInput {
   return { date: "", start_time: "10:00", end_time: "16:00" };
 }
@@ -50,7 +56,7 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
         }))
       : [blankDate()],
   );
-  const [errors, setErrors] = useState<string[]>([]);
+  const [errors, setErrors] = useState<FormError[]>([]);
 
   function updateDate(index: number, patch: Partial<EventDateInput>) {
     setDates((prev) => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)));
@@ -75,19 +81,24 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
     toast.success("Poster added.");
   }
 
-  function validate(): string[] {
-    const found: string[] = [];
-    if (!title.trim()) found.push("Please give the event a title.");
-    const filled = dates.filter((d) => d.date);
-    if (filled.length === 0) found.push("Please add at least one date for the event.");
-    for (const d of filled) {
-      if (d.start_time && d.end_time && d.end_time <= d.start_time) {
-        found.push(`On ${d.date}, the end time must be later than the start time.`);
-        break;
-      }
+  function validate(): FormError[] {
+    const found: FormError[] = [];
+    if (!title.trim()) found.push({ id: "err-title", message: "Please give the event a title." });
+    if (!dates.some((d) => d.date)) {
+      found.push({ id: "err-dates", message: "Please add at least one date for the event." });
     }
+    dates.forEach((d, index) => {
+      if (d.date && d.start_time && d.end_time && d.end_time <= d.start_time) {
+        found.push({
+          id: `err-date-${index}`,
+          message: `On ${d.date}, the end time must be later than the start time.`,
+        });
+      }
+    });
     return found;
   }
+
+  const hasError = (id: string) => errors.some((e) => e.id === id);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -135,8 +146,10 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
         >
           <p className="font-semibold">There's a little more to fill in:</p>
           <ul className="mt-2 list-disc space-y-1 pl-5">
-            {errors.map((message) => (
-              <li key={message}>{message}</li>
+            {errors.map((error) => (
+              <li key={error.id} id={error.id}>
+                {error.message}
+              </li>
             ))}
           </ul>
         </div>
@@ -150,6 +163,8 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Art @ The Academy presents: Celebrate Life!"
+            aria-invalid={hasError("err-title") || undefined}
+            aria-describedby={hasError("err-title") ? "err-title" : undefined}
           />
         </div>
 
@@ -246,6 +261,8 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
                   type="date"
                   value={d.date}
                   onChange={(e) => updateDate(index, { date: e.target.value })}
+                  aria-invalid={hasError("err-dates") || undefined}
+                  aria-describedby={hasError("err-dates") ? "err-dates" : undefined}
                 />
               </div>
               <div className="space-y-2">
@@ -264,6 +281,8 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
                   type="time"
                   value={d.end_time}
                   onChange={(e) => updateDate(index, { end_time: e.target.value })}
+                  aria-invalid={hasError(`err-date-${index}`) || undefined}
+                  aria-describedby={hasError(`err-date-${index}`) ? `err-date-${index}` : undefined}
                 />
               </div>
               <Button

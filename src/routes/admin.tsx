@@ -50,6 +50,7 @@ function SignInScreen() {
         {error ? (
           <p
             role="alert"
+            id="signin-error"
             className="mt-6 border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive"
           >
             {error}
@@ -65,6 +66,8 @@ function SignInScreen() {
               autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "signin-error" : undefined}
             />
           </div>
           <div className="space-y-2">
@@ -75,6 +78,8 @@ function SignInScreen() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "signin-error" : undefined}
             />
           </div>
         </div>
@@ -97,7 +102,9 @@ function AdminLayout() {
   if (session === undefined) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-parchment">
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p role="status" className="text-sm text-muted-foreground">
+          Loading…
+        </p>
       </div>
     );
   }
@@ -106,6 +113,12 @@ function AdminLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
+      <a
+        href="#admin-main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
+      >
+        Skip to content
+      </a>
       <header className="border-b border-border bg-parchment">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-5 py-5 md:px-8">
           <div>
@@ -129,7 +142,7 @@ function AdminLayout() {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-10 md:px-8">
+      <main id="admin-main" className="mx-auto w-full max-w-5xl flex-1 px-5 py-10 md:px-8">
         {/* Child admin routes render here. */}
         <Outlet />
       </main>
