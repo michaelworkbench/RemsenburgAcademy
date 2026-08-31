@@ -3,26 +3,11 @@ import { Mail, MapPin } from "lucide-react";
 
 import { PageHeader, PublicShell } from "@/components/public-shell";
 import { ACADEMY_IMAGES } from "@/lib/academy-images";
+import { fetchCommittee } from "@/lib/api";
 import { ogMeta } from "@/lib/site";
 
-const OFFICERS = [
-  { name: "Maggie Brush", role: "President" },
-  { name: "Bob Busking", role: "Vice President and Treasurer" },
-  { name: "Sally Pope", role: "Secretary" },
-];
-
-const MEMBERS = [
-  "Chris Cohen",
-  "Matthew Conlon",
-  "Paul Dempsey",
-  "Tom Downing",
-  "Ceil Frank",
-  "Dorothy Labowski",
-  "Nancy Lombardi",
-  "Claudia Woods",
-];
-
 export const Route = createFileRoute("/contact")({
+  loader: () => fetchCommittee(),
   head: () => ({
     meta: [
       { title: "Contact — The Remsenburg Academy" },
@@ -44,6 +29,10 @@ export const Route = createFileRoute("/contact")({
 });
 
 function Contact() {
+  const committee = Route.useLoaderData();
+  const officers = committee.filter((m) => m.title.trim() !== "");
+  const members = committee.filter((m) => m.title.trim() === "");
+
   return (
     <PublicShell>
       <PageHeader eyebrow="Get in touch" title="Contact" />
@@ -55,21 +44,25 @@ function Contact() {
             The Committee
           </h2>
           <ul className="mt-6 list-none space-y-4 p-0">
-            {OFFICERS.map((person) => (
-              <li key={person.name} className="border-b border-border pb-4">
+            {officers.map((person) => (
+              <li key={person.id} className="border-b border-border pb-4">
                 <p className="font-display text-2xl">{person.name}</p>
-                <p className="label-caps mt-1">{person.role}</p>
+                <p className="label-caps mt-1">{person.title}</p>
               </li>
             ))}
           </ul>
-          <h3 className="mt-8 eyebrow">Members</h3>
-          <ul className="mt-4 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">
-            {MEMBERS.map((name) => (
-              <li key={name} className="text-foreground/85">
-                {name}
-              </li>
-            ))}
-          </ul>
+          {members.length > 0 ? (
+            <>
+              <h3 className="mt-8 eyebrow">Members</h3>
+              <ul className="mt-4 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">
+                {members.map((person) => (
+                  <li key={person.id} className="text-foreground/85">
+                    {person.name}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
         </section>
 
         <section aria-labelledby="details">

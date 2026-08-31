@@ -123,9 +123,30 @@ function AdminLayout() {
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-5 py-5 md:px-8">
           <div>
             <p className="eyebrow">Academy Admin</p>
-            <Link to="/admin" className="font-display text-2xl">
-              Events
-            </Link>
+            <nav aria-label="Admin sections" className="mt-1 flex items-center gap-5">
+              <Link
+                to="/admin"
+                activeOptions={{ exact: true }}
+                className="font-display text-2xl text-foreground/60"
+                activeProps={{ className: "font-display text-2xl text-foreground" }}
+              >
+                Events
+              </Link>
+              <Link
+                to="/admin/photos"
+                className="font-display text-2xl text-foreground/60"
+                activeProps={{ className: "font-display text-2xl text-foreground" }}
+              >
+                Photos
+              </Link>
+              <Link
+                to="/admin/committee"
+                className="font-display text-2xl text-foreground/60"
+                activeProps={{ className: "font-display text-2xl text-foreground" }}
+              >
+                Committee
+              </Link>
+            </nav>
           </div>
           <div className="flex items-center gap-4 text-sm">
             <Link to="/" className="text-primary underline">

@@ -68,4 +68,11 @@ production to the Academy's own account:
 
 One event has many dates (`events` ← `event_dates`): a six-day exhibit is a
 single admin entry with six date rows. "Upcoming vs past" is computed against
-the calendar date in America/New_York (`src/lib/event-format.ts`).
+the calendar date in America/New_York (`src/lib/event-format.ts`). The event
+category controls placement: Art Exhibit / Art Reception events also appear
+on the ArtRemsenburg page.
+
+Admins also manage the committee roster shown on the Contact page
+(`committee_members` — elected officers and members change over time) and the
+public photo gallery (`gallery_photos` — captions, ordering, and uploads once
+R2 is enabled). Both live under the admin's Photos and Committee tabs.

@@ -50,7 +50,7 @@ async function serveR2Image(pathname: string): Promise<Response> {
   const bucket = getImagesBucket();
   if (!bucket) return new Response("Image storage not configured", { status: 404 });
   const key = pathname.replace(/^\/r2img\//, "");
-  if (!/^posters\/[A-Za-z0-9-]+\.(jpg|png|webp)$/.test(key)) {
+  if (!/^(posters|gallery)\/[A-Za-z0-9-]+\.(jpg|png|webp)$/.test(key)) {
     return new Response("Not found", { status: 404 });
   }
   const object = await bucket.get(key);

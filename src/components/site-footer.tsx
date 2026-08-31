@@ -34,6 +34,16 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link className={footerLink} to="/events" hash="past">
+                Past Events
+              </Link>
+            </li>
+            <li>
+              <Link className={footerLink} to="/gallery">
+                Gallery
+              </Link>
+            </li>
+            <li>
               <Link className={footerLink} to="/history">
                 History
               </Link>

@@ -14,11 +14,14 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ArtremsenburgRouteImport } from './routes/artremsenburg'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as EventsRouteImport } from './routes/events'
+import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminEventIdRouteImport } from './routes/admin.$eventId'
+import { Route as AdminCommitteeRouteImport } from './routes/admin.committee'
 import { Route as AdminNewRouteImport } from './routes/admin.new'
+import { Route as AdminPhotosRouteImport } from './routes/admin.photos'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -45,6 +48,11 @@ const EventsRoute = EventsRouteImport.update({
   path: '/events',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GalleryRoute = GalleryRouteImport.update({
+  id: '/gallery',
+  path: '/gallery',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HistoryRoute = HistoryRouteImport.update({
   id: '/history',
   path: '/history',
@@ -65,9 +73,19 @@ const AdminEventIdRoute = AdminEventIdRouteImport.update({
   path: '/$eventId',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCommitteeRoute = AdminCommitteeRouteImport.update({
+  id: '/committee',
+  path: '/committee',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminNewRoute = AdminNewRouteImport.update({
   id: '/new',
   path: '/new',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPhotosRoute = AdminPhotosRouteImport.update({
+  id: '/photos',
+  path: '/photos',
   getParentRoute: () => AdminRoute,
 } as any)
 
@@ -77,10 +95,13 @@ export interface FileRoutesByFullPath {
   '/artremsenburg': typeof ArtremsenburgRoute
   '/contact': typeof ContactRoute
   '/events': typeof EventsRoute
+  '/gallery': typeof GalleryRoute
   '/history': typeof HistoryRoute
   '/support': typeof SupportRoute
   '/admin/$eventId': typeof AdminEventIdRoute
+  '/admin/committee': typeof AdminCommitteeRoute
   '/admin/new': typeof AdminNewRoute
+  '/admin/photos': typeof AdminPhotosRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
@@ -88,10 +109,13 @@ export interface FileRoutesByTo {
   '/artremsenburg': typeof ArtremsenburgRoute
   '/contact': typeof ContactRoute
   '/events': typeof EventsRoute
+  '/gallery': typeof GalleryRoute
   '/history': typeof HistoryRoute
   '/support': typeof SupportRoute
   '/admin/$eventId': typeof AdminEventIdRoute
+  '/admin/committee': typeof AdminCommitteeRoute
   '/admin/new': typeof AdminNewRoute
+  '/admin/photos': typeof AdminPhotosRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
@@ -101,10 +125,13 @@ export interface FileRoutesById {
   '/artremsenburg': typeof ArtremsenburgRoute
   '/contact': typeof ContactRoute
   '/events': typeof EventsRoute
+  '/gallery': typeof GalleryRoute
   '/history': typeof HistoryRoute
   '/support': typeof SupportRoute
   '/admin/$eventId': typeof AdminEventIdRoute
+  '/admin/committee': typeof AdminCommitteeRoute
   '/admin/new': typeof AdminNewRoute
+  '/admin/photos': typeof AdminPhotosRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -115,10 +142,13 @@ export interface FileRouteTypes {
     | '/artremsenburg'
     | '/contact'
     | '/events'
+    | '/gallery'
     | '/history'
     | '/support'
     | '/admin/$eventId'
+    | '/admin/committee'
     | '/admin/new'
+    | '/admin/photos'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -126,10 +156,13 @@ export interface FileRouteTypes {
     | '/artremsenburg'
     | '/contact'
     | '/events'
+    | '/gallery'
     | '/history'
     | '/support'
     | '/admin/$eventId'
+    | '/admin/committee'
     | '/admin/new'
+    | '/admin/photos'
     | '/admin'
   id:
     | '__root__'
@@ -138,10 +171,13 @@ export interface FileRouteTypes {
     | '/artremsenburg'
     | '/contact'
     | '/events'
+    | '/gallery'
     | '/history'
     | '/support'
     | '/admin/$eventId'
+    | '/admin/committee'
     | '/admin/new'
+    | '/admin/photos'
     | '/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -151,6 +187,7 @@ export interface RootRouteChildren {
   ArtremsenburgRoute: typeof ArtremsenburgRoute
   ContactRoute: typeof ContactRoute
   EventsRoute: typeof EventsRoute
+  GalleryRoute: typeof GalleryRoute
   HistoryRoute: typeof HistoryRoute
   SupportRoute: typeof SupportRoute
 }
@@ -192,6 +229,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/gallery': {
+      id: '/gallery'
+      path: '/gallery'
+      fullPath: '/gallery'
+      preLoaderRoute: typeof GalleryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/history': {
       id: '/history'
       path: '/history'
@@ -220,6 +264,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEventIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/committee': {
+      id: '/admin/committee'
+      path: '/committee'
+      fullPath: '/admin/committee'
+      preLoaderRoute: typeof AdminCommitteeRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/new': {
       id: '/admin/new'
       path: '/new'
@@ -227,18 +278,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminNewRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/photos': {
+      id: '/admin/photos'
+      path: '/photos'
+      fullPath: '/admin/photos'
+      preLoaderRoute: typeof AdminPhotosRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
   AdminEventIdRoute: typeof AdminEventIdRoute
+  AdminCommitteeRoute: typeof AdminCommitteeRoute
   AdminNewRoute: typeof AdminNewRoute
+  AdminPhotosRoute: typeof AdminPhotosRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminEventIdRoute: AdminEventIdRoute,
+  AdminCommitteeRoute: AdminCommitteeRoute,
   AdminNewRoute: AdminNewRoute,
+  AdminPhotosRoute: AdminPhotosRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
@@ -250,6 +312,7 @@ const rootRouteChildren: RootRouteChildren = {
   ArtremsenburgRoute: ArtremsenburgRoute,
   ContactRoute: ContactRoute,
   EventsRoute: EventsRoute,
+  GalleryRoute: GalleryRoute,
   HistoryRoute: HistoryRoute,
   SupportRoute: SupportRoute,
 }

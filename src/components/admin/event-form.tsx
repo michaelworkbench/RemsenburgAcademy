@@ -184,8 +184,8 @@ export function EventForm({ event }: { event?: AcademyEvent }) {
           </Select>
           <p id="category-hint" className="text-xs text-muted-foreground">
             The category decides where the event appears. <strong>Art Exhibit</strong> and{" "}
-            <strong>Art Reception</strong> show on both the Events page and the ArtRemsenburg
-            page; <strong>General</strong> shows on the Events page only.
+            <strong>Art Reception</strong> show on both the Events page and the ArtRemsenburg page;{" "}
+            <strong>General</strong> shows on the Events page only.
           </p>
         </div>
 

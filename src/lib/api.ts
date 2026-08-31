@@ -20,6 +20,14 @@ import {
   setEventPublished,
   updateEventRecord,
 } from "@/server/events-data";
+import {
+  addGalleryPhoto,
+  deleteGalleryPhoto,
+  listCommittee,
+  listGallery,
+  replaceCommittee,
+  updateGalleryMeta,
+} from "@/server/site-content";
 
 /* --------------------------------- schemas ---------------------------------- */
 
@@ -155,7 +163,7 @@ export const signOutFn = createServerFn({ method: "POST" }).handler(async () => 
   return { ok: true };
 });
 
-/* ------------------------------ poster uploads ------------------------------- */
+/* ------------------------------ image uploads ------------------------------- */
 
 const uploadSchema = z.object({
   fileName: z.string().min(1).max(200),
@@ -164,49 +172,110 @@ const uploadSchema = z.object({
   dataBase64: z.string().min(1).max(6_000_000),
 });
 
+type UploadPayload = z.infer<typeof uploadSchema>;
+
+/** Validates and stores one image in R2 under `prefix/`; returns its URL. */
+async function storeImage(
+  prefix: "posters" | "gallery",
+  data: UploadPayload,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const bucket = getImagesBucket();
+  if (!bucket) {
+    return {
+      ok: false,
+      error:
+        "Image uploads aren't switched on yet — they arrive with the Academy's own hosting account.",
+    };
+  }
+  const bytes = Uint8Array.from(atob(data.dataBase64), (c) => c.charCodeAt(0));
+  if (bytes.length > 4 * 1024 * 1024) {
+    return { ok: false, error: "That image is larger than 4 MB. Please choose a smaller one." };
+  }
+  const looksLike = {
+    "image/jpeg": bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff,
+    "image/png": bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47,
+    "image/webp":
+      bytes[0] === 0x52 &&
+      bytes[1] === 0x49 &&
+      bytes[2] === 0x46 &&
+      bytes[3] === 0x46 &&
+      bytes[8] === 0x57 &&
+      bytes[9] === 0x45 &&
+      bytes[10] === 0x42 &&
+      bytes[11] === 0x50,
+  }[data.contentType];
+  if (!looksLike) {
+    return { ok: false, error: "That file doesn't look like a valid image. Please try another." };
+  }
+  const ext =
+    data.contentType === "image/png" ? "png" : data.contentType === "image/webp" ? "webp" : "jpg";
+  const key = `${prefix}/${crypto.randomUUID()}.${ext}`;
+  await bucket.put(key, bytes.buffer as ArrayBuffer, {
+    httpMetadata: { contentType: data.contentType },
+  });
+  return { ok: true, url: `/r2img/${key}` };
+}
+
 export const uploadPosterFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => uploadSchema.parse(d))
   .handler(async ({ data }) => {
     await requireAdmin();
-    const bucket = getImagesBucket();
-    if (!bucket) {
-      return {
-        ok: false as const,
-        error:
-          "Image uploads aren't switched on yet — they arrive with the Academy's own hosting account. You can save the event without a poster for now.",
-      };
-    }
-    const bytes = Uint8Array.from(atob(data.dataBase64), (c) => c.charCodeAt(0));
-    if (bytes.length > 4 * 1024 * 1024) {
-      return {
-        ok: false as const,
-        error: "That image is larger than 4 MB. Please choose a smaller one.",
-      };
-    }
-    const looksLike = {
-      "image/jpeg": bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff,
-      "image/png": bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47,
-      "image/webp":
-        bytes[0] === 0x52 &&
-        bytes[1] === 0x49 &&
-        bytes[2] === 0x46 &&
-        bytes[3] === 0x46 &&
-        bytes[8] === 0x57 &&
-        bytes[9] === 0x45 &&
-        bytes[10] === 0x42 &&
-        bytes[11] === 0x50,
-    }[data.contentType];
-    if (!looksLike) {
-      return {
-        ok: false as const,
-        error: "That file doesn't look like a valid image. Please try another.",
-      };
-    }
-    const ext =
-      data.contentType === "image/png" ? "png" : data.contentType === "image/webp" ? "webp" : "jpg";
-    const key = `posters/${crypto.randomUUID()}.${ext}`;
-    await bucket.put(key, bytes.buffer as ArrayBuffer, {
-      httpMetadata: { contentType: data.contentType },
-    });
-    return { ok: true as const, url: `/r2img/${key}` };
+    return storeImage("posters", data);
+  });
+
+/* ------------------------- committee & photo gallery ------------------------- */
+
+export const fetchCommittee = createServerFn({ method: "GET" }).handler(() => listCommittee());
+
+const committeeSchema = z
+  .array(
+    z.object({
+      name: z.string().trim().min(1).max(120),
+      title: z.string().trim().max(120),
+    }),
+  )
+  .min(1)
+  .max(50);
+
+export const saveCommitteeFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => committeeSchema.parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    await replaceCommittee(data);
+    return { ok: true };
+  });
+
+export const fetchGallery = createServerFn({ method: "GET" }).handler(() => listGallery());
+
+export const addGalleryPhotoFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ upload: uploadSchema, caption: z.string().trim().max(300) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    const stored = await storeImage("gallery", data.upload);
+    if (!stored.ok) return stored;
+    await addGalleryPhoto(stored.url, data.caption);
+    return { ok: true as const, url: stored.url };
+  });
+
+export const saveGalleryMetaFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .array(z.object({ id: z.string().min(1).max(100), caption: z.string().trim().max(300) }))
+      .max(200)
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    await updateGalleryMeta(data);
+    return { ok: true };
+  });
+
+export const deleteGalleryPhotoFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => idSchema.parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    await deleteGalleryPhoto(data.id);
+    return { ok: true };
   });
