@@ -2,7 +2,7 @@
  * D1 queries for the committee roster and the photo gallery — site content
  * that admins edit but which isn't event data.
  */
-import { getDb } from "./cf";
+import { getDb, getImagesBucket } from "./cf";
 
 export interface CommitteeMember {
   id: string;
@@ -26,8 +26,14 @@ export async function listCommittee(): Promise<CommitteeMember[]> {
   return rows.results;
 }
 
-/** Full-replace save: the admin screen submits the entire roster in order. */
-export async function replaceCommittee(members: { name: string; title: string }[]): Promise<void> {
+/**
+ * Full-replace save: the admin screen submits the entire roster in order.
+ * Rows that already exist keep their id (stable across edits); new rows get
+ * one. Concurrent edits are last-write-wins — acceptable for a 3-admin org.
+ */
+export async function replaceCommittee(
+  members: { id?: string | undefined; name: string; title: string }[],
+): Promise<void> {
   const db = getDb();
   await db.batch([
     db.prepare("DELETE FROM committee_members"),
@@ -36,7 +42,7 @@ export async function replaceCommittee(members: { name: string; title: string }[
         .prepare(
           "INSERT INTO committee_members (id, name, title, sort_order) VALUES (?1, ?2, ?3, ?4)",
         )
-        .bind(`cm-${crypto.randomUUID().slice(0, 8)}`, m.name, m.title, i + 1),
+        .bind(m.id ?? `cm-${crypto.randomUUID().slice(0, 8)}`, m.name, m.title, i + 1),
     ),
   ]);
 }
@@ -50,8 +56,9 @@ export async function listGallery(): Promise<GalleryPhoto[]> {
   return rows.results;
 }
 
-export async function addGalleryPhoto(imageUrl: string, caption: string): Promise<void> {
+export async function addGalleryPhoto(imageUrl: string, caption: string): Promise<string> {
   const db = getDb();
+  const id = `gp-${crypto.randomUUID().slice(0, 8)}`;
   const max = await db
     .prepare("SELECT COALESCE(MAX(sort_order), 0) AS m FROM gallery_photos")
     .first<{ m: number }>();
@@ -59,12 +66,14 @@ export async function addGalleryPhoto(imageUrl: string, caption: string): Promis
     .prepare(
       "INSERT INTO gallery_photos (id, image_url, caption, sort_order) VALUES (?1, ?2, ?3, ?4)",
     )
-    .bind(`gp-${crypto.randomUUID().slice(0, 8)}`, imageUrl, caption, (max?.m ?? 0) + 1)
+    .bind(id, imageUrl, caption, (max?.m ?? 0) + 1)
     .run();
+  return id;
 }
 
 /** Full-replace of captions and ordering for existing photos (by id, in order). */
 export async function updateGalleryMeta(items: { id: string; caption: string }[]): Promise<void> {
+  if (items.length === 0) return;
   const db = getDb();
   await db.batch(
     items.map((item, i) =>
@@ -76,5 +85,22 @@ export async function updateGalleryMeta(items: { id: string; caption: string }[]
 }
 
 export async function deleteGalleryPhoto(id: string): Promise<void> {
-  await getDb().prepare("DELETE FROM gallery_photos WHERE id = ?1").bind(id).run();
+  const db = getDb();
+  const row = await db
+    .prepare("SELECT image_url FROM gallery_photos WHERE id = ?1")
+    .bind(id)
+    .first<{ image_url: string }>();
+  await db.prepare("DELETE FROM gallery_photos WHERE id = ?1").bind(id).run();
+  // Best-effort cleanup of the stored object so deleted photos don't stay
+  // publicly fetchable at their /r2img/ URL.
+  if (row?.image_url.startsWith("/r2img/")) {
+    const bucket = getImagesBucket();
+    if (bucket) {
+      try {
+        await bucket.delete(row.image_url.replace(/^\/r2img\//, ""));
+      } catch (error) {
+        console.error("R2 cleanup failed for", row.image_url, error);
+      }
+    }
+  }
 }

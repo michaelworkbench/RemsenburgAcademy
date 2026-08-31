@@ -13,7 +13,9 @@ import {
   deleteGalleryPhotoFn,
   fetchGallery,
   saveGalleryMetaFn,
+  uploadsEnabledFn,
 } from "@/lib/api";
+import { useUnsavedChangesGuard } from "@/lib/use-unsaved-guard";
 
 export const Route = createFileRoute("/admin/photos")({
   component: AdminPhotos,
@@ -27,11 +29,21 @@ interface Row {
 
 const GALLERY_KEY = ["gallery"] as const;
 
+function metaOf(rows: { id: string; caption: string }[]) {
+  return JSON.stringify(rows.map((r) => ({ id: r.id, caption: r.caption.trim() })));
+}
+
 function AdminPhotos() {
   const queryClient = useQueryClient();
   const refreshSession = useSessionRefresh();
   const fileInput = useRef<HTMLInputElement>(null);
   const { data, isPending } = useQuery({ queryKey: GALLERY_KEY, queryFn: () => fetchGallery() });
+  const { data: uploads } = useQuery({
+    queryKey: ["uploads-enabled"],
+    queryFn: () => uploadsEnabledFn(),
+    staleTime: 5 * 60_000,
+  });
+  const uploadsEnabled = uploads?.enabled ?? false;
 
   const [rows, setRows] = useState<Row[] | null>(null);
   const [saving, setSaving] = useState(false);
@@ -43,17 +55,21 @@ function AdminPhotos() {
     }
   }, [data, rows]);
 
+  // Unsaved caption/order edits: compare against what the server has. Rows
+  // added by upload or removed by delete are already persisted server-side,
+  // so only caption/order differences count as dirty.
+  const dirty =
+    rows !== null &&
+    data !== undefined &&
+    metaOf(rows) !== metaOf(data.map((p) => ({ id: p.id, caption: p.caption })));
+  useUnsavedChangesGuard(dirty);
+
   if (isPending || rows === null) {
     return (
       <p role="status" className="text-sm text-muted-foreground">
         Loading photos…
       </p>
     );
-  }
-
-  function refetch() {
-    setRows(null);
-    void queryClient.invalidateQueries({ queryKey: GALLERY_KEY });
   }
 
   function handleError(error: unknown, fallback: string) {
@@ -82,7 +98,8 @@ function AdminPhotos() {
     })
       .then(() => {
         toast.success("Gallery saved.");
-        refetch();
+        setRows(null);
+        void queryClient.invalidateQueries({ queryKey: GALLERY_KEY });
       })
       .catch((error: unknown) =>
         handleError(error, "The gallery couldn't be saved. Please try again."),
@@ -90,12 +107,17 @@ function AdminPhotos() {
       .finally(() => setSaving(false));
   }
 
-  function handleDelete(row: Row) {
-    if (!window.confirm(`Remove this photo from the gallery? This can't be undone.`)) return;
+  function handleDelete(row: Row, index: number) {
+    const warning = uploadsEnabled
+      ? "Remove this photo from the gallery? This can't be undone."
+      : "Remove this photo from the gallery? This can't be undone, and new photos can't be added until uploads are switched on with the Academy's hosting account.";
+    if (!window.confirm(warning)) return;
     void deleteGalleryPhotoFn({ data: { id: row.id } })
       .then(() => {
+        // Keep the other rows' unsaved edits — just drop the deleted one.
+        setRows((prev) => prev!.filter((_, i) => i !== index));
+        void queryClient.invalidateQueries({ queryKey: GALLERY_KEY });
         toast.success("Photo removed.");
-        refetch();
       })
       .catch((error: unknown) =>
         handleError(error, "The photo couldn't be removed. Please try again."),
@@ -130,8 +152,10 @@ function AdminPhotos() {
         },
       });
       if (result.ok) {
+        // Append locally so in-progress caption edits on other rows survive.
+        setRows((prev) => [...prev!, { id: result.id, image_url: result.url, caption: "" }]);
+        void queryClient.invalidateQueries({ queryKey: GALLERY_KEY });
         toast.success("Photo added — give it a caption below.");
-        refetch();
       } else {
         toast.error(result.error);
       }
@@ -140,6 +164,10 @@ function AdminPhotos() {
     } finally {
       setUploading(false);
     }
+  }
+
+  function photoLabel(row: Row, index: number): string {
+    return row.caption ? `photo ${index + 1} (${row.caption})` : `photo ${index + 1}`;
   }
 
   return (
@@ -152,7 +180,7 @@ function AdminPhotos() {
             help visitors (and screen readers) know what they're seeing.
           </p>
         </div>
-        <div>
+        <div className="text-right">
           <input
             ref={fileInput}
             type="file"
@@ -168,12 +196,17 @@ function AdminPhotos() {
           <Button
             type="button"
             size="lg"
-            disabled={uploading}
+            disabled={uploading || !uploadsEnabled}
             onClick={() => fileInput.current?.click()}
           >
             <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
             {uploading ? "Uploading…" : "Add photo"}
           </Button>
+          {!uploadsEnabled ? (
+            <p className="mt-2 max-w-56 text-xs text-muted-foreground">
+              Uploads arrive with the Academy's own hosting account. Captions and ordering work now.
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -207,7 +240,7 @@ function AdminPhotos() {
                 type="button"
                 variant="outline"
                 size="sm"
-                aria-label="Move photo up"
+                aria-label={`Move ${photoLabel(row, index)} up`}
                 disabled={index === 0}
                 onClick={() => move(index, -1)}
               >
@@ -217,7 +250,7 @@ function AdminPhotos() {
                 type="button"
                 variant="outline"
                 size="sm"
-                aria-label="Move photo down"
+                aria-label={`Move ${photoLabel(row, index)} down`}
                 disabled={index === rows.length - 1}
                 onClick={() => move(index, 1)}
               >
@@ -227,9 +260,9 @@ function AdminPhotos() {
                 type="button"
                 variant="ghost"
                 size="sm"
-                aria-label="Remove photo"
+                aria-label={`Remove ${photoLabel(row, index)}`}
                 className="text-destructive"
-                onClick={() => handleDelete(row)}
+                onClick={() => handleDelete(row, index)}
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
               </Button>

@@ -187,7 +187,12 @@ async function storeImage(
         "Image uploads aren't switched on yet — they arrive with the Academy's own hosting account.",
     };
   }
-  const bytes = Uint8Array.from(atob(data.dataBase64), (c) => c.charCodeAt(0));
+  let bytes: Uint8Array;
+  try {
+    bytes = Uint8Array.from(atob(data.dataBase64), (c) => c.charCodeAt(0));
+  } catch {
+    return { ok: false, error: "That file couldn't be read. Please try another image." };
+  }
   if (bytes.length > 4 * 1024 * 1024) {
     return { ok: false, error: "That image is larger than 4 MB. Please choose a smaller one." };
   }
@@ -230,6 +235,10 @@ export const fetchCommittee = createServerFn({ method: "GET" }).handler(() => li
 const committeeSchema = z
   .array(
     z.object({
+      id: z
+        .string()
+        .regex(/^[A-Za-z0-9-]{1,40}$/)
+        .optional(),
       name: z.string().trim().min(1).max(120),
       title: z.string().trim().max(120),
     }),
@@ -247,6 +256,12 @@ export const saveCommitteeFn = createServerFn({ method: "POST" })
 
 export const fetchGallery = createServerFn({ method: "GET" }).handler(() => listGallery());
 
+/** Whether image uploads are live (the R2 binding exists on this deploy). */
+export const uploadsEnabledFn = createServerFn({ method: "GET" }).handler(async () => {
+  await requireAdmin();
+  return { enabled: getImagesBucket() !== null };
+});
+
 export const addGalleryPhotoFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({ upload: uploadSchema, caption: z.string().trim().max(300) }).parse(d),
@@ -255,8 +270,8 @@ export const addGalleryPhotoFn = createServerFn({ method: "POST" })
     await requireAdmin();
     const stored = await storeImage("gallery", data.upload);
     if (!stored.ok) return stored;
-    await addGalleryPhoto(stored.url, data.caption);
-    return { ok: true as const, url: stored.url };
+    const id = await addGalleryPhoto(stored.url, data.caption);
+    return { ok: true as const, id, url: stored.url };
   });
 
 export const saveGalleryMetaFn = createServerFn({ method: "POST" })

@@ -9,14 +9,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { isAuthError, useSessionRefresh } from "@/lib/admin-auth";
 import { fetchCommittee, saveCommitteeFn } from "@/lib/api";
+import { useUnsavedChangesGuard } from "@/lib/use-unsaved-guard";
 
 export const Route = createFileRoute("/admin/committee")({
   component: AdminCommittee,
 });
 
 interface Row {
+  /** Present for people already saved; absent for newly added rows. */
+  id?: string;
   name: string;
   title: string;
+}
+
+function rosterOf(rows: Row[]) {
+  return JSON.stringify(rows.map((r) => ({ name: r.name.trim(), title: r.title.trim() })));
 }
 
 function AdminCommittee() {
@@ -30,12 +37,18 @@ function AdminCommittee() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Seed the editable rows once the roster loads (and after outside changes).
+  // Seed the editable rows once the roster loads.
   useEffect(() => {
     if (data && rows === null) {
-      setRows(data.map((m) => ({ name: m.name, title: m.title })));
+      setRows(data.map((m) => ({ id: m.id, name: m.name, title: m.title })));
     }
   }, [data, rows]);
+
+  const dirty =
+    rows !== null &&
+    data !== undefined &&
+    rosterOf(rows) !== rosterOf(data.map((m) => ({ name: m.name, title: m.title })));
+  useUnsavedChangesGuard(dirty);
 
   if (isPending || rows === null) {
     return (
@@ -60,7 +73,7 @@ function AdminCommittee() {
   }
 
   function handleSave() {
-    const cleaned = rows!.map((r) => ({ name: r.name.trim(), title: r.title.trim() }));
+    const cleaned = rows!.map((r) => ({ id: r.id, name: r.name.trim(), title: r.title.trim() }));
     if (cleaned.some((r) => !r.name)) {
       toast.error("Every person needs a name — remove empty rows before saving.");
       return;
@@ -72,8 +85,8 @@ function AdminCommittee() {
     setSaving(true);
     void saveCommitteeFn({ data: cleaned })
       .then(() => {
+        setRows(null);
         void queryClient.invalidateQueries({ queryKey: ["committee"] });
-        setRows(cleaned);
         toast.success("Committee saved. The Contact page is updated.");
       })
       .catch((error: unknown) => {
@@ -98,7 +111,7 @@ function AdminCommittee() {
       <ul className="mt-8 list-none space-y-3 p-0">
         {rows.map((row, index) => (
           <li
-            key={index}
+            key={row.id ?? `new-${index}`}
             className="grid gap-3 border border-border bg-card p-4 sm:grid-cols-[1.2fr_1.2fr_auto] sm:items-end"
           >
             <div className="space-y-1.5">

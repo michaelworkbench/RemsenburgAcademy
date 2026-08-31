@@ -116,10 +116,16 @@ export async function signInWithPassword(
     `pbkdf2$sha256$${PBKDF2_ITERATIONS}$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=`;
   const ok = await verifyPassword(password, stored);
   if (!admin || !ok) {
+    // The counter keeps accumulating past a lock: once at the limit, every
+    // further failure re-arms the lockout rather than granting a fresh batch
+    // of free attempts, and repeat offenders wait progressively longer.
     const failures = (throttle?.fail_count ?? 0) + 1;
+    const overLimit = failures - MAX_FAILED_ATTEMPTS;
     const lockedUntil =
-      failures >= MAX_FAILED_ATTEMPTS
-        ? new Date(Date.now() + LOCKOUT_MINUTES * 60_000).toISOString()
+      overLimit >= 0
+        ? new Date(
+            Date.now() + LOCKOUT_MINUTES * 60_000 * Math.min(2 ** Math.floor(overLimit / 5), 8),
+          ).toISOString()
         : null;
     await db
       .prepare(
@@ -130,7 +136,7 @@ export async function signInWithPassword(
            locked_until = excluded.locked_until,
            last_fail = excluded.last_fail`,
       )
-      .bind(key, lockedUntil ? 0 : failures, lockedUntil, new Date().toISOString())
+      .bind(key, failures, lockedUntil, new Date().toISOString())
       .run();
     return null;
   }

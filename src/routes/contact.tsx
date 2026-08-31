@@ -43,6 +43,11 @@ function Contact() {
           <h2 id="committee" className="mt-4 font-display text-[2.25rem] leading-[1.1]">
             The Committee
           </h2>
+          {committee.length === 0 ? (
+            <p className="mt-6 text-base text-muted-foreground">
+              Committee details are being updated — please check back soon.
+            </p>
+          ) : null}
           <ul className="mt-6 list-none space-y-4 p-0">
             {officers.map((person) => (
               <li key={person.id} className="border-b border-border pb-4">

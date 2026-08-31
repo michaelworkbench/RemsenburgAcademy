@@ -28,6 +28,7 @@ export interface R2Bucket {
   get(
     key: string,
   ): Promise<{ body: ReadableStream; httpMetadata?: { contentType?: string } } | null>;
+  delete(key: string): Promise<void>;
 }
 
 export interface CloudflareEnv {
