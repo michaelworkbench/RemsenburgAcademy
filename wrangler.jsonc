@@ -27,10 +27,9 @@
       "database_id": "e08f8d20-ff41-44c1-a28d-8eb1a8c84394"
     }
   ],
-  // Poster image uploads. PAUSED until the Academy's own Cloudflare account
-  // exists with R2 enabled — then create the bucket and uncomment:
-  // "r2_buckets": [
-  //   { "binding": "IMAGES", "bucket_name": "remsenburg-academy-images" }
-  // ],
+  // Poster and gallery image uploads (enabled 2026-11-23).
+  "r2_buckets": [
+    { "binding": "IMAGES", "bucket_name": "remsenburg-academy-images" }
+  ],
   "observability": { "enabled": true }
 }
